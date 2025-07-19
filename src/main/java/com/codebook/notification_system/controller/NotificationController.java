@@ -19,22 +19,19 @@ public class NotificationController {
     private final NotificationClientService notificationClientService;
     private final NotificationHistoryService notificationHistoryService;
     private final NotificationMessageVersionService notificationMessageVersionService;
-    private final NotificationViewService notificationViewService;
-    private final UserNotificationDismissedService userNotificationDismissedService;
+    private final NotificationUserStatusService notificationUserStatusService;
 
     public NotificationController(
             NotificationService notificationService,
             NotificationClientService notificationClientService,
             NotificationHistoryService notificationHistoryService,
             NotificationMessageVersionService notificationMessageVersionService,
-            NotificationViewService notificationViewService,
-            UserNotificationDismissedService userNotificationDismissedService) {
+            NotificationUserStatusService notificationUserStatusService) {
         this.notificationService = notificationService;
         this.notificationClientService = notificationClientService;
         this.notificationHistoryService = notificationHistoryService;
         this.notificationMessageVersionService = notificationMessageVersionService;
-        this.notificationViewService = notificationViewService;
-        this.userNotificationDismissedService = userNotificationDismissedService;
+        this.notificationUserStatusService = notificationUserStatusService;
     }
 
     // Notification Endpoints
@@ -225,75 +222,61 @@ public class NotificationController {
         });
     }
 
-    // NotificationView Endpoints
-    @GetMapping("/views/{id}")
-    public CompletableFuture<ResponseEntity<NotificationViewDto>> getNotificationView(@PathVariable Long id) {
+    // NotificationUserStatus Endpoints
+    @GetMapping("/user-status/{id}")
+    public CompletableFuture<ResponseEntity<NotificationUserStatusDto>> getNotificationUserStatus(@PathVariable Long id) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                NotificationViewDto notificationViewDto = notificationViewService.getNotificationView(id);
-                return ResponseEntity.ok(notificationViewDto);
+                NotificationUserStatusDto notificationUserStatusDto = notificationUserStatusService.getNotificationUserStatus(id);
+                return ResponseEntity.ok(notificationUserStatusDto);
             } catch (RuntimeException e) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
         });
     }
 
-    @PostMapping("/views")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CompletableFuture<ResponseEntity<NotificationViewDto>> createNotificationView(@Valid @RequestBody NotificationViewDto notificationViewDto) {
+    @GetMapping("/user-status")
+    public CompletableFuture<ResponseEntity<PagedModel<NotificationUserStatusDto>>> getAllNotificationUserStatuses(Pageable pageable) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                NotificationViewDto createdNotificationView = notificationViewService.createNotificationView(notificationViewDto);
-                return ResponseEntity.status(HttpStatus.CREATED).body(createdNotificationView);
+                PagedModel<NotificationUserStatusDto> statuses = notificationUserStatusService.getAllNotificationUserStatuses(pageable);
+                return ResponseEntity.ok(statuses);
+            } catch (RuntimeException e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+        });
+    }
+
+    @PostMapping("/user-status")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CompletableFuture<ResponseEntity<NotificationUserStatusDto>> createNotificationUserStatus(@Valid @RequestBody NotificationUserStatusDto notificationUserStatusDto) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                NotificationUserStatusDto createdNotificationUserStatus = notificationUserStatusService.createNotificationUserStatus(notificationUserStatusDto);
+                return ResponseEntity.status(HttpStatus.CREATED).body(createdNotificationUserStatus);
             } catch (RuntimeException e) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
         });
     }
 
-    @DeleteMapping("/views/{id}")
-    public CompletableFuture<ResponseEntity<Void>> deleteNotificationView(@PathVariable Long id) {
+    @PutMapping("/user-status/{id}")
+    public CompletableFuture<ResponseEntity<NotificationUserStatusDto>> updateNotificationUserStatus(@PathVariable Long id, @Valid @RequestBody NotificationUserStatusDto notificationUserStatusDto) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                notificationViewService.deleteNotificationView(id);
-                return ResponseEntity.noContent().build();
-            } catch (RuntimeException e) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
-        });
-    }
-
-    // UserNotificationDismissed Endpoints
-    @GetMapping("/dismissed/{id}")
-    public CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> getUserNotificationDismissed(@PathVariable Long id) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                UserNotificationDismissedDto userNotificationDismissedDto = userNotificationDismissedService.getUserNotificationDismissed(id);
-                return ResponseEntity.ok(userNotificationDismissedDto);
+                NotificationUserStatusDto updatedNotificationUserStatus = notificationUserStatusService.updateNotificationUserStatus(id, notificationUserStatusDto);
+                return ResponseEntity.ok(updatedNotificationUserStatus);
             } catch (RuntimeException e) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
         });
     }
 
-    @PostMapping("/dismissed")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> createUserNotificationDismissed(@Valid @RequestBody UserNotificationDismissedDto userNotificationDismissedDto) {
+    @DeleteMapping("/user-status/{id}")
+    public CompletableFuture<ResponseEntity<Void>> deleteNotificationUserStatus(@PathVariable Long id) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                UserNotificationDismissedDto createdUserNotificationDismissed = userNotificationDismissedService.createUserNotificationDismissed(userNotificationDismissedDto);
-                return ResponseEntity.status(HttpStatus.CREATED).body(createdUserNotificationDismissed);
-            } catch (RuntimeException e) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-            }
-        });
-    }
-
-    @DeleteMapping("/dismissed/{id}")
-    public CompletableFuture<ResponseEntity<Void>> deleteUserNotificationDismissed(@PathVariable Long id) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                userNotificationDismissedService.deleteUserNotificationDismissed(id);
+                notificationUserStatusService.deleteNotificationUserStatus(id);
                 return ResponseEntity.noContent().build();
             } catch (RuntimeException e) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).build();

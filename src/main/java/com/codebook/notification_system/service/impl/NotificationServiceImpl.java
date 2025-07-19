@@ -21,40 +21,34 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationClientRepository notificationClientRepository;
     private final NotificationHistoryRepository notificationHistoryRepository;
     private final NotificationMessageVersionRepository notificationMessageVersionRepository;
-    private final NotificationViewRepository notificationViewRepository;
-    private final UserNotificationDismissedRepository userNotificationDismissedRepository;
+    private final NotificationUserStatusRepository notificationUserStatusRepository;
     private final NotificationMapper notificationMapper;
     private final NotificationClientMapper notificationClientMapper;
     private final NotificationHistoryMapper notificationHistoryMapper;
     private final NotificationMessageVersionMapper notificationMessageVersionMapper;
-    private final NotificationViewMapper notificationViewMapper;
-    private final UserNotificationDismissedMapper userNotificationDismissedMapper;
+    private final NotificationUserStatusMapper notificationUserStatusMapper;
 
     public NotificationServiceImpl(
             NotificationRepository notificationRepository,
             NotificationClientRepository notificationClientRepository,
             NotificationHistoryRepository notificationHistoryRepository,
             NotificationMessageVersionRepository notificationMessageVersionRepository,
-            NotificationViewRepository notificationViewRepository,
-            UserNotificationDismissedRepository userNotificationDismissedRepository,
+            NotificationUserStatusRepository notificationUserStatusRepository,
             NotificationMapper notificationMapper,
             NotificationClientMapper notificationClientMapper,
             NotificationHistoryMapper notificationHistoryMapper,
             NotificationMessageVersionMapper notificationMessageVersionMapper,
-            NotificationViewMapper notificationViewMapper,
-            UserNotificationDismissedMapper userNotificationDismissedMapper) {
+            NotificationUserStatusMapper notificationUserStatusMapper) {
         this.notificationRepository = notificationRepository;
         this.notificationClientRepository = notificationClientRepository;
         this.notificationHistoryRepository = notificationHistoryRepository;
         this.notificationMessageVersionRepository = notificationMessageVersionRepository;
-        this.notificationViewRepository = notificationViewRepository;
-        this.userNotificationDismissedRepository = userNotificationDismissedRepository;
+        this.notificationUserStatusRepository = notificationUserStatusRepository;
         this.notificationMapper = notificationMapper;
         this.notificationClientMapper = notificationClientMapper;
         this.notificationHistoryMapper = notificationHistoryMapper;
         this.notificationMessageVersionMapper = notificationMessageVersionMapper;
-        this.notificationViewMapper = notificationViewMapper;
-        this.userNotificationDismissedMapper = userNotificationDismissedMapper;
+        this.notificationUserStatusMapper = notificationUserStatusMapper;
     }
 
     @Override
@@ -142,19 +136,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public NotificationViewDto createNotificationView(NotificationViewDto notificationViewDto) {
-        NotificationView notificationView = notificationViewMapper.toEntity(notificationViewDto);
-        notificationView.setLastViewedAt(LocalDateTime.now());
-        NotificationView savedNotificationView = notificationViewRepository.save(notificationView);
-        return notificationViewMapper.toDto(savedNotificationView);
-    }
-
-    @Override
-    @Transactional
-    public UserNotificationDismissedDto createUserNotificationDismissed(UserNotificationDismissedDto userNotificationDismissedDto) {
-        UserNotificationDismissed userNotificationDismissed = userNotificationDismissedMapper.toEntity(userNotificationDismissedDto);
-        userNotificationDismissed.setDismissedAt(LocalDateTime.now());
-        UserNotificationDismissed savedUserNotificationDismissed = userNotificationDismissedRepository.save(userNotificationDismissed);
-        return userNotificationDismissedMapper.toDto(savedUserNotificationDismissed);
+    public NotificationUserStatusDto createNotificationUserStatus(NotificationUserStatusDto notificationUserStatusDto) {
+        NotificationUserStatus notificationUserStatus = notificationUserStatusMapper.toEntity(notificationUserStatusDto);
+        notificationUserStatus.setCreatedAt(LocalDateTime.now());
+        NotificationUserStatus savedNotificationUserStatus = notificationUserStatusRepository.save(notificationUserStatus);
+        return notificationUserStatusMapper.toDto(savedNotificationUserStatus);
     }
 }

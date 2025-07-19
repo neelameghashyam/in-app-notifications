@@ -20,11 +20,12 @@ import org.springframework.http.ResponseEntity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,10 +44,7 @@ class NotificationControllerTest {
     private NotificationMessageVersionService notificationMessageVersionService;
 
     @Mock
-    private NotificationViewService notificationViewService;
-
-    @Mock
-    private UserNotificationDismissedService userNotificationDismissedService;
+    private NotificationUserStatusService notificationUserStatusService;
 
     @InjectMocks
     private NotificationController notificationController;
@@ -55,473 +53,412 @@ class NotificationControllerTest {
     private NotificationClientDto notificationClientDto;
     private NotificationHistoryDto notificationHistoryDto;
     private NotificationMessageVersionDto notificationMessageVersionDto;
-    private NotificationViewDto notificationViewDto;
-    private UserNotificationDismissedDto userNotificationDismissedDto;
+    private NotificationUserStatusDto notificationUserStatusDto;
     private Pageable pageable;
 
     @BeforeEach
     void setUp() {
-        notificationDto = new NotificationDto(1L, "Test Title", "Test Message", LocalDate.now(), LocalDate.now().plusDays(1),
-                null, null, "ACTIVE", "ONCE", LocalDateTime.now(), LocalDateTime.now());
+        notificationDto = new NotificationDto(1L, "Test Title", "Test Message", LocalDate.now(), LocalDate.now().plusDays(1), null, null, "ACTIVE", "DAILY", LocalDateTime.now(), LocalDateTime.now());
         notificationClientDto = new NotificationClientDto(1L, 1L, 1L);
-        notificationHistoryDto = new NotificationHistoryDto(1L, 1L, "user", "title", "UPDATE", "old", "new", LocalDateTime.now());
-        notificationMessageVersionDto = new NotificationMessageVersionDto(1L, 1L, "Test Message", 1, "user", LocalDateTime.now());
-        notificationViewDto = new NotificationViewDto(1L, 1L, 1L, LocalDateTime.now());
-        userNotificationDismissedDto = new UserNotificationDismissedDto(1L, 1L, 1L, LocalDateTime.now());
+        notificationHistoryDto = new NotificationHistoryDto(1L, 1L, "user", "field", "UPDATE", "old", "new", LocalDateTime.now());
+        notificationMessageVersionDto = new NotificationMessageVersionDto(1L, 1L, "Message", 1, "user", LocalDateTime.now());
+        notificationUserStatusDto = new NotificationUserStatusDto(1L, 1L, 1L, LocalDateTime.now(), null, false, LocalDate.now(), LocalDateTime.now());
         pageable = PageRequest.of(0, 10);
     }
 
     @Test
-    void getNotification_Success() {
-        when(notificationService.getNotification(1L)).thenReturn(notificationDto);
+    void getNotification_Success_ReturnsNotificationDto() {
+        when(notificationService.getNotification(anyLong())).thenReturn(notificationDto);
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.getNotification(1L);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationDto, response.join().getBody());
-        verify(notificationService).getNotification(1L);
+        verify(notificationService, times(1)).getNotification(1L);
     }
 
     @Test
-    void getNotification_NotFound() {
-        when(notificationService.getNotification(1L)).thenThrow(new RuntimeException("Not found"));
+    void getNotification_NotFound_ReturnsNotFound() {
+        when(notificationService.getNotification(anyLong())).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.getNotification(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationService).getNotification(1L);
+        verify(notificationService, times(1)).getNotification(1L);
     }
 
     @Test
-    void getAllNotifications_Success() {
-        Page<NotificationDto> page = new PageImpl<>(Collections.singletonList(notificationDto), pageable, 1);
+    void getAllNotifications_Success_ReturnsPagedModel() {
+        Page<NotificationDto> page = new PageImpl<>(Collections.singletonList(notificationDto));
         PagedModel.PageMetadata metadata = new PagedModel.PageMetadata(page.getSize(), page.getNumber(), page.getTotalElements(), page.getTotalPages());
         PagedModel<NotificationDto> pagedModel = PagedModel.of(page.getContent(), metadata);
-
-        when(notificationService.getAllNotifications(pageable)).thenReturn(pagedModel);
+        when(notificationService.getAllNotifications(any(Pageable.class))).thenReturn(pagedModel);
 
         CompletableFuture<ResponseEntity<PagedModel<NotificationDto>>> response = notificationController.getAllNotifications(pageable);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(pagedModel, response.join().getBody());
-        verify(notificationService).getAllNotifications(pageable);
+        verify(notificationService, times(1)).getAllNotifications(pageable);
     }
 
     @Test
-    void getAllNotifications_Failure() {
-        when(notificationService.getAllNotifications(pageable)).thenThrow(new RuntimeException("Error"));
+    void getAllNotifications_Failure_ReturnsInternalServerError() {
+        when(notificationService.getAllNotifications(any(Pageable.class))).thenThrow(new RuntimeException("Error"));
 
         CompletableFuture<ResponseEntity<PagedModel<NotificationDto>>> response = notificationController.getAllNotifications(pageable);
-
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationService).getAllNotifications(pageable);
+        verify(notificationService, times(1)).getAllNotifications(pageable);
     }
 
     @Test
-    void createNotification_Success() {
+    void createNotification_Success_ReturnsCreated() {
         when(notificationService.createNotification(any(NotificationDto.class))).thenReturn(notificationDto);
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.createNotification(notificationDto);
-
         assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
         assertEquals(notificationDto, response.join().getBody());
-        verify(notificationService).createNotification(any(NotificationDto.class));
+        verify(notificationService, times(1)).createNotification(notificationDto);
     }
 
     @Test
-    void createNotification_BadRequest() {
+    void createNotification_Failure_ReturnsBadRequest() {
         when(notificationService.createNotification(any(NotificationDto.class))).thenThrow(new RuntimeException("Bad request"));
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.createNotification(notificationDto);
-
         assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationService).createNotification(any(NotificationDto.class));
+        verify(notificationService, times(1)).createNotification(notificationDto);
     }
 
     @Test
-    void updateNotification_Success() {
-        when(notificationService.updateNotification(eq(1L), any(NotificationDto.class))).thenReturn(notificationDto);
+    void updateNotification_Success_ReturnsUpdatedNotification() {
+        when(notificationService.updateNotification(anyLong(), any(NotificationDto.class))).thenReturn(notificationDto);
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.updateNotification(1L, notificationDto);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationDto, response.join().getBody());
-        verify(notificationService).updateNotification(eq(1L), any(NotificationDto.class));
+        verify(notificationService, times(1)).updateNotification(1L, notificationDto);
     }
 
     @Test
-    void updateNotification_NotFound() {
-        when(notificationService.updateNotification(eq(1L), any(NotificationDto.class))).thenThrow(new RuntimeException("Not found"));
+    void updateNotification_NotFound_ReturnsNotFound() {
+        when(notificationService.updateNotification(anyLong(), any(NotificationDto.class))).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationDto>> response = notificationController.updateNotification(1L, notificationDto);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationService).updateNotification(eq(1L), any(NotificationDto.class));
+        verify(notificationService, times(1)).updateNotification(1L, notificationDto);
     }
 
     @Test
-    void deleteNotification_Success() {
-        doNothing().when(notificationService).deleteNotification(1L);
+    void deleteNotification_Success_ReturnsNoContent() {
+        doNothing().when(notificationService).deleteNotification(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotification(1L);
-
         assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(notificationService).deleteNotification(1L);
+        verify(notificationService, times(1)).deleteNotification(1L);
     }
 
     @Test
-    void deleteNotification_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(notificationService).deleteNotification(1L);
+    void deleteNotification_NotFound_ReturnsNotFound() {
+        doThrow(new RuntimeException("Not found")).when(notificationService).deleteNotification(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotification(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(notificationService).deleteNotification(1L);
+        verify(notificationService, times(1)).deleteNotification(1L);
     }
 
     @Test
-    void getNotificationClient_Success() {
-        when(notificationClientService.getNotificationClient(1L)).thenReturn(notificationClientDto);
+    void getNotificationClient_Success_ReturnsNotificationClientDto() {
+        when(notificationClientService.getNotificationClient(anyLong())).thenReturn(notificationClientDto);
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.getNotificationClient(1L);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationClientDto, response.join().getBody());
-        verify(notificationClientService).getNotificationClient(1L);
+        verify(notificationClientService, times(1)).getNotificationClient(1L);
     }
 
     @Test
-    void getNotificationClient_NotFound() {
-        when(notificationClientService.getNotificationClient(1L)).thenThrow(new RuntimeException("Not found"));
+    void getNotificationClient_NotFound_ReturnsNotFound() {
+        when(notificationClientService.getNotificationClient(anyLong())).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.getNotificationClient(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationClientService).getNotificationClient(1L);
+        verify(notificationClientService, times(1)).getNotificationClient(1L);
     }
 
     @Test
-    void createNotificationClient_Success() {
+    void createNotificationClient_Success_ReturnsCreated() {
         when(notificationClientService.createNotificationClient(any(NotificationClientDto.class))).thenReturn(notificationClientDto);
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.createNotificationClient(notificationClientDto);
-
         assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
         assertEquals(notificationClientDto, response.join().getBody());
-        verify(notificationClientService).createNotificationClient(any(NotificationClientDto.class));
+        verify(notificationClientService, times(1)).createNotificationClient(notificationClientDto);
     }
 
     @Test
-    void createNotificationClient_BadRequest() {
+    void createNotificationClient_Failure_ReturnsBadRequest() {
         when(notificationClientService.createNotificationClient(any(NotificationClientDto.class))).thenThrow(new RuntimeException("Bad request"));
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.createNotificationClient(notificationClientDto);
-
         assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationClientService).createNotificationClient(any(NotificationClientDto.class));
+        verify(notificationClientService, times(1)).createNotificationClient(notificationClientDto);
     }
 
     @Test
-    void updateNotificationClient_Success() {
-        when(notificationClientService.updateNotificationClient(eq(1L), any(NotificationClientDto.class))).thenReturn(notificationClientDto);
+    void updateNotificationClient_Success_ReturnsUpdatedClient() {
+        when(notificationClientService.updateNotificationClient(anyLong(), any(NotificationClientDto.class))).thenReturn(notificationClientDto);
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.updateNotificationClient(1L, notificationClientDto);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationClientDto, response.join().getBody());
-        verify(notificationClientService).updateNotificationClient(eq(1L), any(NotificationClientDto.class));
+        verify(notificationClientService, times(1)).updateNotificationClient(1L, notificationClientDto);
     }
 
     @Test
-    void updateNotificationClient_NotFound() {
-        when(notificationClientService.updateNotificationClient(eq(1L), any(NotificationClientDto.class))).thenThrow(new RuntimeException("Not found"));
+    void updateNotificationClient_NotFound_ReturnsNotFound() {
+        when(notificationClientService.updateNotificationClient(anyLong(), any(NotificationClientDto.class))).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationClientDto>> response = notificationController.updateNotificationClient(1L, notificationClientDto);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationClientService).updateNotificationClient(eq(1L), any(NotificationClientDto.class));
+        verify(notificationClientService, times(1)).updateNotificationClient(1L, notificationClientDto);
     }
 
     @Test
-    void deleteNotificationClient_Success() {
-        doNothing().when(notificationClientService).deleteNotificationClient(1L);
+    void deleteNotificationClient_Success_ReturnsNoContent() {
+        doNothing().when(notificationClientService).deleteNotificationClient(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationClient(1L);
-
         assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(notificationClientService).deleteNotificationClient(1L);
+        verify(notificationClientService, times(1)).deleteNotificationClient(1L);
     }
 
     @Test
-    void deleteNotificationClient_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(notificationClientService).deleteNotificationClient(1L);
+    void deleteNotificationClient_NotFound_ReturnsNotFound() {
+        doThrow(new RuntimeException("Not found")).when(notificationClientService).deleteNotificationClient(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationClient(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(notificationClientService).deleteNotificationClient(1L);
+        verify(notificationClientService, times(1)).deleteNotificationClient(1L);
     }
 
     @Test
-    void getNotificationHistory_Success() {
-        when(notificationHistoryService.getNotificationHistory(1L)).thenReturn(notificationHistoryDto);
+    void getNotificationHistory_Success_ReturnsNotificationHistoryDto() {
+        when(notificationHistoryService.getNotificationHistory(anyLong())).thenReturn(notificationHistoryDto);
 
         CompletableFuture<ResponseEntity<NotificationHistoryDto>> response = notificationController.getNotificationHistory(1L);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationHistoryDto, response.join().getBody());
-        verify(notificationHistoryService).getNotificationHistory(1L);
+        verify(notificationHistoryService, times(1)).getNotificationHistory(1L);
     }
 
     @Test
-    void getNotificationHistory_NotFound() {
-        when(notificationHistoryService.getNotificationHistory(1L)).thenThrow(new RuntimeException("Not found"));
+    void getNotificationHistory_NotFound_ReturnsNotFound() {
+        when(notificationHistoryService.getNotificationHistory(anyLong())).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationHistoryDto>> response = notificationController.getNotificationHistory(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationHistoryService).getNotificationHistory(1L);
+        verify(notificationHistoryService, times(1)).getNotificationHistory(1L);
     }
 
     @Test
-    void createNotificationHistory_Success() {
+    void createNotificationHistory_Success_ReturnsCreated() {
         when(notificationHistoryService.createNotificationHistory(any(NotificationHistoryDto.class))).thenReturn(notificationHistoryDto);
 
         CompletableFuture<ResponseEntity<NotificationHistoryDto>> response = notificationController.createNotificationHistory(notificationHistoryDto);
-
         assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
         assertEquals(notificationHistoryDto, response.join().getBody());
-        verify(notificationHistoryService).createNotificationHistory(any(NotificationHistoryDto.class));
+        verify(notificationHistoryService, times(1)).createNotificationHistory(notificationHistoryDto);
     }
 
     @Test
-    void createNotificationHistory_BadRequest() {
+    void createNotificationHistory_Failure_ReturnsBadRequest() {
         when(notificationHistoryService.createNotificationHistory(any(NotificationHistoryDto.class))).thenThrow(new RuntimeException("Bad request"));
 
         CompletableFuture<ResponseEntity<NotificationHistoryDto>> response = notificationController.createNotificationHistory(notificationHistoryDto);
-
         assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationHistoryService).createNotificationHistory(any(NotificationHistoryDto.class));
+        verify(notificationHistoryService, times(1)).createNotificationHistory(notificationHistoryDto);
     }
 
     @Test
-    void deleteNotificationHistory_Success() {
-        doNothing().when(notificationHistoryService).deleteNotificationHistory(1L);
+    void deleteNotificationHistory_Success_ReturnsNoContent() {
+        doNothing().when(notificationHistoryService).deleteNotificationHistory(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationHistory(1L);
-
         assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(notificationHistoryService).deleteNotificationHistory(1L);
+        verify(notificationHistoryService, times(1)).deleteNotificationHistory(1L);
     }
 
     @Test
-    void deleteNotificationHistory_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(notificationHistoryService).deleteNotificationHistory(1L);
+    void deleteNotificationHistory_NotFound_ReturnsNotFound() {
+        doThrow(new RuntimeException("Not found")).when(notificationHistoryService).deleteNotificationHistory(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationHistory(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(notificationHistoryService).deleteNotificationHistory(1L);
+        verify(notificationHistoryService, times(1)).deleteNotificationHistory(1L);
     }
 
     @Test
-    void getNotificationMessageVersion_Success() {
-        when(notificationMessageVersionService.getNotificationMessageVersion(1L)).thenReturn(notificationMessageVersionDto);
+    void getNotificationMessageVersion_Success_ReturnsNotificationMessageVersionDto() {
+        when(notificationMessageVersionService.getNotificationMessageVersion(anyLong())).thenReturn(notificationMessageVersionDto);
 
         CompletableFuture<ResponseEntity<NotificationMessageVersionDto>> response = notificationController.getNotificationMessageVersion(1L);
-
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
         assertEquals(notificationMessageVersionDto, response.join().getBody());
-        verify(notificationMessageVersionService).getNotificationMessageVersion(1L);
+        verify(notificationMessageVersionService, times(1)).getNotificationMessageVersion(1L);
     }
 
     @Test
-    void getNotificationMessageVersion_NotFound() {
-        when(notificationMessageVersionService.getNotificationMessageVersion(1L)).thenThrow(new RuntimeException("Not found"));
+    void getNotificationMessageVersion_NotFound_ReturnsNotFound() {
+        when(notificationMessageVersionService.getNotificationMessageVersion(anyLong())).thenThrow(new RuntimeException("Not found"));
 
         CompletableFuture<ResponseEntity<NotificationMessageVersionDto>> response = notificationController.getNotificationMessageVersion(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationMessageVersionService).getNotificationMessageVersion(1L);
+        verify(notificationMessageVersionService, times(1)).getNotificationMessageVersion(1L);
     }
 
     @Test
-    void createNotificationMessageVersion_Success() {
+    void createNotificationMessageVersion_Success_ReturnsCreated() {
         when(notificationMessageVersionService.createNotificationMessageVersion(any(NotificationMessageVersionDto.class))).thenReturn(notificationMessageVersionDto);
 
         CompletableFuture<ResponseEntity<NotificationMessageVersionDto>> response = notificationController.createNotificationMessageVersion(notificationMessageVersionDto);
-
         assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
         assertEquals(notificationMessageVersionDto, response.join().getBody());
-        verify(notificationMessageVersionService).createNotificationMessageVersion(any(NotificationMessageVersionDto.class));
+        verify(notificationMessageVersionService, times(1)).createNotificationMessageVersion(notificationMessageVersionDto);
     }
 
     @Test
-    void createNotificationMessageVersion_BadRequest() {
+    void createNotificationMessageVersion_Failure_ReturnsBadRequest() {
         when(notificationMessageVersionService.createNotificationMessageVersion(any(NotificationMessageVersionDto.class))).thenThrow(new RuntimeException("Bad request"));
 
         CompletableFuture<ResponseEntity<NotificationMessageVersionDto>> response = notificationController.createNotificationMessageVersion(notificationMessageVersionDto);
-
         assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationMessageVersionService).createNotificationMessageVersion(any(NotificationMessageVersionDto.class));
+        verify(notificationMessageVersionService, times(1)).createNotificationMessageVersion(notificationMessageVersionDto);
     }
 
     @Test
-    void deleteNotificationMessageVersion_Success() {
-        doNothing().when(notificationMessageVersionService).deleteNotificationMessageVersion(1L);
+    void deleteNotificationMessageVersion_Success_ReturnsNoContent() {
+        doNothing().when(notificationMessageVersionService).deleteNotificationMessageVersion(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationMessageVersion(1L);
-
         assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(notificationMessageVersionService).deleteNotificationMessageVersion(1L);
+        verify(notificationMessageVersionService, times(1)).deleteNotificationMessageVersion(1L);
     }
 
     @Test
-    void deleteNotificationMessageVersion_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(notificationMessageVersionService).deleteNotificationMessageVersion(1L);
+    void deleteNotificationMessageVersion_NotFound_ReturnsNotFound() {
+        doThrow(new RuntimeException("Not found")).when(notificationMessageVersionService).deleteNotificationMessageVersion(anyLong());
 
         CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationMessageVersion(1L);
-
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(notificationMessageVersionService).deleteNotificationMessageVersion(1L);
+        verify(notificationMessageVersionService, times(1)).deleteNotificationMessageVersion(1L);
     }
 
     @Test
-    void getNotificationView_Success() {
-        when(notificationViewService.getNotificationView(1L)).thenReturn(notificationViewDto);
+    void getNotificationUserStatus_Success_ReturnsNotificationUserStatusDto() {
+        when(notificationUserStatusService.getNotificationUserStatus(anyLong())).thenReturn(notificationUserStatusDto);
 
-        CompletableFuture<ResponseEntity<NotificationViewDto>> response = notificationController.getNotificationView(1L);
-
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.getNotificationUserStatus(1L);
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
-        assertEquals(notificationViewDto, response.join().getBody());
-        verify(notificationViewService).getNotificationView(1L);
+        assertEquals(notificationUserStatusDto, response.join().getBody());
+        verify(notificationUserStatusService, times(1)).getNotificationUserStatus(1L);
     }
 
     @Test
-    void getNotificationView_NotFound() {
-        when(notificationViewService.getNotificationView(1L)).thenThrow(new RuntimeException("Not found"));
+    void getNotificationUserStatus_NotFound_ReturnsNotFound() {
+        when(notificationUserStatusService.getNotificationUserStatus(anyLong())).thenThrow(new RuntimeException("Not found"));
 
-        CompletableFuture<ResponseEntity<NotificationViewDto>> response = notificationController.getNotificationView(1L);
-
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.getNotificationUserStatus(1L);
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationViewService).getNotificationView(1L);
+        verify(notificationUserStatusService, times(1)).getNotificationUserStatus(1L);
     }
 
     @Test
-    void createNotificationView_Success() {
-        when(notificationViewService.createNotificationView(any(NotificationViewDto.class))).thenReturn(notificationViewDto);
+    void getAllNotificationUserStatuses_Success_ReturnsPagedModel() {
+        Page<NotificationUserStatusDto> page = new PageImpl<>(Collections.singletonList(notificationUserStatusDto));
+        PagedModel.PageMetadata metadata = new PagedModel.PageMetadata(page.getSize(), page.getNumber(), page.getTotalElements(), page.getTotalPages());
+        PagedModel<NotificationUserStatusDto> pagedModel = PagedModel.of(page.getContent(), metadata);
+        when(notificationUserStatusService.getAllNotificationUserStatuses(any(Pageable.class))).thenReturn(pagedModel);
 
-        CompletableFuture<ResponseEntity<NotificationViewDto>> response = notificationController.createNotificationView(notificationViewDto);
+        CompletableFuture<ResponseEntity<PagedModel<NotificationUserStatusDto>>> response = notificationController.getAllNotificationUserStatuses(pageable);
+        assertEquals(HttpStatus.OK, response.join().getStatusCode());
+        assertEquals(pagedModel, response.join().getBody());
+        verify(notificationUserStatusService, times(1)).getAllNotificationUserStatuses(pageable);
+    }
 
+    @Test
+    void getAllNotificationUserStatuses_Failure_ReturnsInternalServerError() {
+        when(notificationUserStatusService.getAllNotificationUserStatuses(any(Pageable.class))).thenThrow(new RuntimeException("Error"));
+
+        CompletableFuture<ResponseEntity<PagedModel<NotificationUserStatusDto>>> response = notificationController.getAllNotificationUserStatuses(pageable);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.join().getStatusCode());
+        assertNull(response.join().getBody());
+        verify(notificationUserStatusService, times(1)).getAllNotificationUserStatuses(pageable);
+    }
+
+    @Test
+    void createNotificationUserStatus_Success_ReturnsCreated() {
+        when(notificationUserStatusService.createNotificationUserStatus(any(NotificationUserStatusDto.class))).thenReturn(notificationUserStatusDto);
+
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.createNotificationUserStatus(notificationUserStatusDto);
         assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
-        assertEquals(notificationViewDto, response.join().getBody());
-        verify(notificationViewService).createNotificationView(any(NotificationViewDto.class));
+        assertEquals(notificationUserStatusDto, response.join().getBody());
+        verify(notificationUserStatusService, times(1)).createNotificationUserStatus(notificationUserStatusDto);
     }
 
     @Test
-    void createNotificationView_BadRequest() {
-        when(notificationViewService.createNotificationView(any(NotificationViewDto.class))).thenThrow(new RuntimeException("Bad request"));
+    void createNotificationUserStatus_Failure_ReturnsBadRequest() {
+        when(notificationUserStatusService.createNotificationUserStatus(any(NotificationUserStatusDto.class))).thenThrow(new RuntimeException("Bad request"));
 
-        CompletableFuture<ResponseEntity<NotificationViewDto>> response = notificationController.createNotificationView(notificationViewDto);
-
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.createNotificationUserStatus(notificationUserStatusDto);
         assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(notificationViewService).createNotificationView(any(NotificationViewDto.class));
+        verify(notificationUserStatusService, times(1)).createNotificationUserStatus(notificationUserStatusDto);
     }
 
     @Test
-    void deleteNotificationView_Success() {
-        doNothing().when(notificationViewService).deleteNotificationView(1L);
+    void updateNotificationUserStatus_Success_ReturnsUpdatedStatus() {
+        when(notificationUserStatusService.updateNotificationUserStatus(anyLong(), any(NotificationUserStatusDto.class))).thenReturn(notificationUserStatusDto);
 
-        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationView(1L);
-
-        assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(notificationViewService).deleteNotificationView(1L);
-    }
-
-    @Test
-    void deleteNotificationView_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(notificationViewService).deleteNotificationView(1L);
-
-        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationView(1L);
-
-        assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(notificationViewService).deleteNotificationView(1L);
-    }
-
-    @Test
-    void getUserNotificationDismissed_Success() {
-        when(userNotificationDismissedService.getUserNotificationDismissed(1L)).thenReturn(userNotificationDismissedDto);
-
-        CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> response = notificationController.getUserNotificationDismissed(1L);
-
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.updateNotificationUserStatus(1L, notificationUserStatusDto);
         assertEquals(HttpStatus.OK, response.join().getStatusCode());
-        assertEquals(userNotificationDismissedDto, response.join().getBody());
-        verify(userNotificationDismissedService).getUserNotificationDismissed(1L);
+        assertEquals(notificationUserStatusDto, response.join().getBody());
+        verify(notificationUserStatusService, times(1)).updateNotificationUserStatus(1L, notificationUserStatusDto);
     }
 
     @Test
-    void getUserNotificationDismissed_NotFound() {
-        when(userNotificationDismissedService.getUserNotificationDismissed(1L)).thenThrow(new RuntimeException("Not found"));
+    void updateNotificationUserStatus_NotFound_ReturnsNotFound() {
+        when(notificationUserStatusService.updateNotificationUserStatus(anyLong(), any(NotificationUserStatusDto.class))).thenThrow(new RuntimeException("Not found"));
 
-        CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> response = notificationController.getUserNotificationDismissed(1L);
-
+        CompletableFuture<ResponseEntity<NotificationUserStatusDto>> response = notificationController.updateNotificationUserStatus(1L, notificationUserStatusDto);
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
         assertNull(response.join().getBody());
-        verify(userNotificationDismissedService).getUserNotificationDismissed(1L);
+        verify(notificationUserStatusService, times(1)).updateNotificationUserStatus(1L, notificationUserStatusDto);
     }
 
     @Test
-    void createUserNotificationDismissed_Success() {
-        when(userNotificationDismissedService.createUserNotificationDismissed(any(UserNotificationDismissedDto.class))).thenReturn(userNotificationDismissedDto);
+    void deleteNotificationUserStatus_Success_ReturnsNoContent() {
+        doNothing().when(notificationUserStatusService).deleteNotificationUserStatus(anyLong());
 
-        CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> response = notificationController.createUserNotificationDismissed(userNotificationDismissedDto);
-
-        assertEquals(HttpStatus.CREATED, response.join().getStatusCode());
-        assertEquals(userNotificationDismissedDto, response.join().getBody());
-        verify(userNotificationDismissedService).createUserNotificationDismissed(any(UserNotificationDismissedDto.class));
-    }
-
-    @Test
-    void createUserNotificationDismissed_BadRequest() {
-        when(userNotificationDismissedService.createUserNotificationDismissed(any(UserNotificationDismissedDto.class))).thenThrow(new RuntimeException("Bad request"));
-
-        CompletableFuture<ResponseEntity<UserNotificationDismissedDto>> response = notificationController.createUserNotificationDismissed(userNotificationDismissedDto);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.join().getStatusCode());
-        assertNull(response.join().getBody());
-        verify(userNotificationDismissedService).createUserNotificationDismissed(any(UserNotificationDismissedDto.class));
-    }
-
-    @Test
-    void deleteUserNotificationDismissed_Success() {
-        doNothing().when(userNotificationDismissedService).deleteUserNotificationDismissed(1L);
-
-        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteUserNotificationDismissed(1L);
-
+        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationUserStatus(1L);
         assertEquals(HttpStatus.NO_CONTENT, response.join().getStatusCode());
-        verify(userNotificationDismissedService).deleteUserNotificationDismissed(1L);
+        verify(notificationUserStatusService, times(1)).deleteNotificationUserStatus(1L);
     }
 
     @Test
-    void deleteUserNotificationDismissed_NotFound() {
-        doThrow(new RuntimeException("Not found")).when(userNotificationDismissedService).deleteUserNotificationDismissed(1L);
+    void deleteNotificationUserStatus_NotFound_ReturnsNotFound() {
+        doThrow(new RuntimeException("Not found")).when(notificationUserStatusService).deleteNotificationUserStatus(anyLong());
 
-        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteUserNotificationDismissed(1L);
-
+        CompletableFuture<ResponseEntity<Void>> response = notificationController.deleteNotificationUserStatus(1L);
         assertEquals(HttpStatus.NOT_FOUND, response.join().getStatusCode());
-        verify(userNotificationDismissedService).deleteUserNotificationDismissed(1L);
+        verify(notificationUserStatusService, times(1)).deleteNotificationUserStatus(1L);
     }
 }

@@ -14,6 +14,5 @@ public interface NotificationService {
     NotificationClientDto createNotificationClient(NotificationClientDto notificationClientDto);
     NotificationHistoryDto createNotificationHistory(NotificationHistoryDto notificationHistoryDto);
     NotificationMessageVersionDto createNotificationMessageVersion(NotificationMessageVersionDto notificationMessageVersionDto);
-    NotificationViewDto createNotificationView(NotificationViewDto notificationViewDto);
-    UserNotificationDismissedDto createUserNotificationDismissed(UserNotificationDismissedDto userNotificationDismissedDto);
+    NotificationUserStatusDto createNotificationUserStatus(NotificationUserStatusDto notificationUserStatusDto);
 }

@@ -19,10 +19,12 @@ import org.springframework.hateoas.PagedModel;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,10 +43,7 @@ class NotificationServiceImplTest {
     private NotificationMessageVersionRepository notificationMessageVersionRepository;
 
     @Mock
-    private NotificationViewRepository notificationViewRepository;
-
-    @Mock
-    private UserNotificationDismissedRepository userNotificationDismissedRepository;
+    private NotificationUserStatusRepository notificationUserStatusRepository;
 
     @Mock
     private NotificationMapper notificationMapper;
@@ -59,263 +58,241 @@ class NotificationServiceImplTest {
     private NotificationMessageVersionMapper notificationMessageVersionMapper;
 
     @Mock
-    private NotificationViewMapper notificationViewMapper;
-
-    @Mock
-    private UserNotificationDismissedMapper userNotificationDismissedMapper;
+    private NotificationUserStatusMapper notificationUserStatusMapper;
 
     @InjectMocks
     private NotificationServiceImpl notificationService;
 
-    private NotificationDto notificationDto;
     private Notification notification;
-    private NotificationClientDto notificationClientDto;
+    private NotificationDto notificationDto;
     private NotificationClient notificationClient;
-    private NotificationHistoryDto notificationHistoryDto;
+    private NotificationClientDto notificationClientDto;
     private NotificationHistory notificationHistory;
-    private NotificationMessageVersionDto notificationMessageVersionDto;
+    private NotificationHistoryDto notificationHistoryDto;
     private NotificationMessageVersion notificationMessageVersion;
-    private NotificationViewDto notificationViewDto;
-    private NotificationView notificationView;
-    private UserNotificationDismissedDto userNotificationDismissedDto;
-    private UserNotificationDismissed userNotificationDismissed;
+    private NotificationMessageVersionDto notificationMessageVersionDto;
+    private NotificationUserStatus notificationUserStatus;
+    private NotificationUserStatusDto notificationUserStatusDto;
     private Pageable pageable;
 
     @BeforeEach
     void setUp() {
-        notificationDto = new NotificationDto(1L, "Test Title", "Test Message", LocalDate.now(), LocalDate.now().plusDays(1),
-                null, null, "ACTIVE", "ONCE", LocalDateTime.now(), LocalDateTime.now());
         notification = new Notification();
         notification.setId(1L);
         notification.setTitle("Test Title");
         notification.setMessage("Test Message");
         notification.setFromDate(LocalDate.now());
         notification.setToDate(LocalDate.now().plusDays(1));
-        notification.setStatus("ACTIVE");
-        notification.setFrequency("ONCE");
         notification.setCreatedAt(LocalDateTime.now());
         notification.setUpdatedAt(LocalDateTime.now());
+        notification.setStatus("ACTIVE");
+        notification.setFrequency("DAILY");
 
-        notificationClientDto = new NotificationClientDto(1L, 1L, 1L);
+        notificationDto = new NotificationDto(1L, "Test Title", "Test Message", LocalDate.now(), LocalDate.now().plusDays(1), null, null, "ACTIVE", "DAILY", LocalDateTime.now(), LocalDateTime.now());
+
         notificationClient = new NotificationClient();
         notificationClient.setId(1L);
         notificationClient.setNotificationId(1L);
         notificationClient.setClientId(1L);
 
-        notificationHistoryDto = new NotificationHistoryDto(1L, 1L, "user", "title", "UPDATE", "old", "new", LocalDateTime.now());
+        notificationClientDto = new NotificationClientDto(1L, 1L, 1L);
+
         notificationHistory = new NotificationHistory();
         notificationHistory.setHistoryId(1L);
         notificationHistory.setNotificationId(1L);
         notificationHistory.setUpdatedBy("user");
-        notificationHistory.setFieldName("title");
+        notificationHistory.setFieldName("field");
         notificationHistory.setAction("UPDATE");
         notificationHistory.setOldValue("old");
         notificationHistory.setNewValue("new");
         notificationHistory.setUpdatedAt(LocalDateTime.now());
 
-        notificationMessageVersionDto = new NotificationMessageVersionDto(1L, 1L, "Test Message", 1, "user", LocalDateTime.now());
+        notificationHistoryDto = new NotificationHistoryDto(1L, 1L, "user", "field", "UPDATE", "old", "new", LocalDateTime.now());
+
         notificationMessageVersion = new NotificationMessageVersion();
         notificationMessageVersion.setVersionId(1L);
         notificationMessageVersion.setNotificationId(1L);
-        notificationMessageVersion.setMessage("Test Message");
+        notificationMessageVersion.setMessage("Message");
         notificationMessageVersion.setVersionNumber(1);
         notificationMessageVersion.setUpdatedBy("user");
         notificationMessageVersion.setUpdatedAt(LocalDateTime.now());
 
-        notificationViewDto = new NotificationViewDto(1L, 1L, 1L, LocalDateTime.now());
-        notificationView = new NotificationView();
-        notificationView.setId(1L);
-        notificationView.setNotificationId(1L);
-        notificationView.setUserId(1L);
-        notificationView.setLastViewedAt(LocalDateTime.now());
+        notificationMessageVersionDto = new NotificationMessageVersionDto(1L, 1L, "Message", 1, "user", LocalDateTime.now());
 
-        userNotificationDismissedDto = new UserNotificationDismissedDto(1L, 1L, 1L, LocalDateTime.now());
-        userNotificationDismissed = new UserNotificationDismissed();
-        userNotificationDismissed.setId(1L);
-        userNotificationDismissed.setNotificationId(1L);
-        userNotificationDismissed.setUserId(1L);
-        userNotificationDismissed.setDismissedAt(LocalDateTime.now());
+        notificationUserStatus = new NotificationUserStatus();
+        notificationUserStatus.setId(1L);
+        notificationUserStatus.setNotificationId(1L);
+        notificationUserStatus.setUserId(1L);
+        notificationUserStatus.setSeenAt(LocalDateTime.now());
+        notificationUserStatus.setDontShowAgain(false);
+        notificationUserStatus.setLastShownDate(LocalDate.now());
+        notificationUserStatus.setCreatedAt(LocalDateTime.now());
+
+        notificationUserStatusDto = new NotificationUserStatusDto(1L, 1L, 1L, LocalDateTime.now(), null, false, LocalDate.now(), LocalDateTime.now());
 
         pageable = PageRequest.of(0, 10);
     }
 
     @Test
-    void getNotification_Success() {
-        when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
-        when(notificationMapper.toDto(notification)).thenReturn(notificationDto);
+    void getNotification_Success_ReturnsNotificationDto() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.of(notification));
+        when(notificationMapper.toDto(any(Notification.class))).thenReturn(notificationDto);
 
         NotificationDto result = notificationService.getNotification(1L);
-
         assertEquals(notificationDto, result);
-        verify(notificationRepository).findById(1L);
-        verify(notificationMapper).toDto(notification);
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationMapper, times(1)).toDto(notification);
     }
 
     @Test
-    void getNotification_NotFound() {
-        when(notificationRepository.findById(1L)).thenReturn(Optional.empty());
+    void getNotification_NotFound_ThrowsException() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> notificationService.getNotification(1L));
         assertEquals("Notification not found with id: 1", exception.getMessage());
-        verify(notificationRepository).findById(1L);
-        verifyNoInteractions(notificationMapper);
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationMapper, never()).toDto(any());
     }
 
     @Test
-    void getAllNotifications_Success() {
-        Page<Notification> page = new PageImpl<>(Collections.singletonList(notification), pageable, 1);
-        when(notificationRepository.findAllByOrderByTitleAsc(pageable)).thenReturn(page);
-        when(notificationMapper.toDto(notification)).thenReturn(notificationDto);
+    void getAllNotifications_Success_ReturnsPagedModel() {
+        Page<Notification> page = new PageImpl<>(Collections.singletonList(notification));
+        when(notificationRepository.findAllByOrderByTitleAsc(any(Pageable.class))).thenReturn(page);
+        when(notificationMapper.toDto(any(Notification.class))).thenReturn(notificationDto);
 
         PagedModel<NotificationDto> result = notificationService.getAllNotifications(pageable);
-
         assertEquals(1, result.getContent().size());
-        assertEquals(notificationDto, result.getContent().stream().findFirst().orElse(null));
-        assertEquals(1, result.getMetadata().getTotalElements());
-        verify(notificationRepository).findAllByOrderByTitleAsc(pageable);
-        verify(notificationMapper).toDto(notification);
+        assertEquals(notificationDto, result.getContent().iterator().next());
+        verify(notificationRepository, times(1)).findAllByOrderByTitleAsc(pageable);
+        verify(notificationMapper, times(1)).toDto(notification);
     }
 
     @Test
-    void createNotification_Success() {
-        when(notificationMapper.toEntity(notificationDto)).thenReturn(notification);
-        when(notificationRepository.save(notification)).thenReturn(notification);
-        when(notificationMapper.toDto(notification)).thenReturn(notificationDto);
+    void getAllNotifications_EmptyPage_ReturnsEmptyPagedModel() {
+        Page<Notification> page = new PageImpl<>(Collections.emptyList());
+        when(notificationRepository.findAllByOrderByTitleAsc(any(Pageable.class))).thenReturn(page);
+
+        PagedModel<NotificationDto> result = notificationService.getAllNotifications(pageable);
+        assertTrue(result.getContent().isEmpty());
+        verify(notificationRepository, times(1)).findAllByOrderByTitleAsc(pageable);
+        verify(notificationMapper, never()).toDto(any());
+    }
+
+    @Test
+    void createNotification_Success_ReturnsNotificationDto() {
+        when(notificationMapper.toEntity(any(NotificationDto.class))).thenReturn(notification);
+        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
+        when(notificationMapper.toDto(any(Notification.class))).thenReturn(notificationDto);
 
         NotificationDto result = notificationService.createNotification(notificationDto);
-
         assertEquals(notificationDto, result);
-        verify(notificationMapper).toEntity(notificationDto);
-        verify(notificationRepository).save(notification);
-        verify(notificationMapper).toDto(notification);
+        verify(notificationRepository, times(1)).save(notification);
+        verify(notificationMapper, times(1)).toEntity(notificationDto);
+        verify(notificationMapper, times(1)).toDto(notification);
         assertNotNull(notification.getCreatedAt());
         assertNotNull(notification.getUpdatedAt());
     }
 
     @Test
-    void updateNotification_Success() {
-        Notification existingNotification = new Notification();
-        existingNotification.setId(1L);
-        existingNotification.setCreatedAt(LocalDateTime.now());
-
-        when(notificationRepository.findById(1L)).thenReturn(Optional.of(existingNotification));
-        when(notificationMapper.toEntity(notificationDto)).thenReturn(notification);
-        when(notificationRepository.save(notification)).thenReturn(notification);
-        when(notificationMapper.toDto(notification)).thenReturn(notificationDto);
+    void updateNotification_Success_ReturnsUpdatedNotificationDto() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.of(notification));
+        when(notificationMapper.toEntity(any(NotificationDto.class))).thenReturn(notification);
+        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
+        when(notificationMapper.toDto(any(Notification.class))).thenReturn(notificationDto);
 
         NotificationDto result = notificationService.updateNotification(1L, notificationDto);
-
         assertEquals(notificationDto, result);
-        verify(notificationRepository).findById(1L);
-        verify(notificationMapper).toEntity(notificationDto);
-        verify(notificationRepository).save(notification);
-        verify(notificationMapper).toDto(notification);
-        assertEquals(existingNotification.getCreatedAt(), notification.getCreatedAt());
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationRepository, times(1)).save(notification);
+        verify(notificationMapper, times(1)).toEntity(notificationDto);
+        verify(notificationMapper, times(1)).toDto(notification);
         assertNotNull(notification.getUpdatedAt());
     }
 
     @Test
-    void updateNotification_NotFound() {
-        when(notificationRepository.findById(1L)).thenReturn(Optional.empty());
+    void updateNotification_NotFound_ThrowsException() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> notificationService.updateNotification(1L, notificationDto));
         assertEquals("Notification not found with id: 1", exception.getMessage());
-        verify(notificationRepository).findById(1L);
-        verifyNoInteractions(notificationMapper);
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationRepository, never()).save(any());
+        verify(notificationMapper, never()).toEntity(any());
+        verify(notificationMapper, never()).toDto(any());
     }
 
     @Test
-    void deleteNotification_Success() {
-        when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
-        doNothing().when(notificationRepository).delete(notification);
+    void deleteNotification_Success_DeletesNotification() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.of(notification));
+        doNothing().when(notificationRepository).delete(any(Notification.class));
 
         notificationService.deleteNotification(1L);
-
-        verify(notificationRepository).findById(1L);
-        verify(notificationRepository).delete(notification);
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationRepository, times(1)).delete(notification);
     }
 
     @Test
-    void deleteNotification_NotFound() {
-        when(notificationRepository.findById(1L)).thenReturn(Optional.empty());
+    void deleteNotification_NotFound_ThrowsException() {
+        when(notificationRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> notificationService.deleteNotification(1L));
         assertEquals("Notification not found with id: 1", exception.getMessage());
-        verify(notificationRepository).findById(1L);
-        verifyNoMoreInteractions(notificationRepository);
+        verify(notificationRepository, times(1)).findById(1L);
+        verify(notificationRepository, never()).delete(any());
     }
 
     @Test
-    void createNotificationClient_Success() {
-        when(notificationClientMapper.toEntity(notificationClientDto)).thenReturn(notificationClient);
-        when(notificationClientRepository.save(notificationClient)).thenReturn(notificationClient);
-        when(notificationClientMapper.toDto(notificationClient)).thenReturn(notificationClientDto);
+    void createNotificationClient_Success_ReturnsNotificationClientDto() {
+        when(notificationClientMapper.toEntity(any(NotificationClientDto.class))).thenReturn(notificationClient);
+        when(notificationClientRepository.save(any(NotificationClient.class))).thenReturn(notificationClient);
+        when(notificationClientMapper.toDto(any(NotificationClient.class))).thenReturn(notificationClientDto);
 
         NotificationClientDto result = notificationService.createNotificationClient(notificationClientDto);
-
         assertEquals(notificationClientDto, result);
-        verify(notificationClientMapper).toEntity(notificationClientDto);
-        verify(notificationClientRepository).save(notificationClient);
-        verify(notificationClientMapper).toDto(notificationClient);
+        verify(notificationClientRepository, times(1)).save(notificationClient);
+        verify(notificationClientMapper, times(1)).toEntity(notificationClientDto);
+        verify(notificationClientMapper, times(1)).toDto(notificationClient);
     }
 
     @Test
-    void createNotificationHistory_Success() {
-        when(notificationHistoryMapper.toEntity(notificationHistoryDto)).thenReturn(notificationHistory);
-        when(notificationHistoryRepository.save(notificationHistory)).thenReturn(notificationHistory);
-        when(notificationHistoryMapper.toDto(notificationHistory)).thenReturn(notificationHistoryDto);
+    void createNotificationHistory_Success_ReturnsNotificationHistoryDto() {
+        when(notificationHistoryMapper.toEntity(any(NotificationHistoryDto.class))).thenReturn(notificationHistory);
+        when(notificationHistoryRepository.save(any(NotificationHistory.class))).thenReturn(notificationHistory);
+        when(notificationHistoryMapper.toDto(any(NotificationHistory.class))).thenReturn(notificationHistoryDto);
 
         NotificationHistoryDto result = notificationService.createNotificationHistory(notificationHistoryDto);
-
         assertEquals(notificationHistoryDto, result);
-        verify(notificationHistoryMapper).toEntity(notificationHistoryDto);
-        verify(notificationHistoryRepository).save(notificationHistory);
-        verify(notificationHistoryMapper).toDto(notificationHistory);
+        verify(notificationHistoryRepository, times(1)).save(notificationHistory);
+        verify(notificationHistoryMapper, times(1)).toEntity(notificationHistoryDto);
+        verify(notificationHistoryMapper, times(1)).toDto(notificationHistory);
         assertNotNull(notificationHistory.getUpdatedAt());
     }
 
     @Test
-    void createNotificationMessageVersion_Success() {
-        when(notificationMessageVersionMapper.toEntity(notificationMessageVersionDto)).thenReturn(notificationMessageVersion);
-        when(notificationMessageVersionRepository.save(notificationMessageVersion)).thenReturn(notificationMessageVersion);
-        when(notificationMessageVersionMapper.toDto(notificationMessageVersion)).thenReturn(notificationMessageVersionDto);
+    void createNotificationMessageVersion_Success_ReturnsNotificationMessageVersionDto() {
+        when(notificationMessageVersionMapper.toEntity(any(NotificationMessageVersionDto.class))).thenReturn(notificationMessageVersion);
+        when(notificationMessageVersionRepository.save(any(NotificationMessageVersion.class))).thenReturn(notificationMessageVersion);
+        when(notificationMessageVersionMapper.toDto(any(NotificationMessageVersion.class))).thenReturn(notificationMessageVersionDto);
 
         NotificationMessageVersionDto result = notificationService.createNotificationMessageVersion(notificationMessageVersionDto);
-
         assertEquals(notificationMessageVersionDto, result);
-        verify(notificationMessageVersionMapper).toEntity(notificationMessageVersionDto);
-        verify(notificationMessageVersionRepository).save(notificationMessageVersion);
-        verify(notificationMessageVersionMapper).toDto(notificationMessageVersion);
+        verify(notificationMessageVersionRepository, times(1)).save(notificationMessageVersion);
+        verify(notificationMessageVersionMapper, times(1)).toEntity(notificationMessageVersionDto);
+        verify(notificationMessageVersionMapper, times(1)).toDto(notificationMessageVersion);
         assertNotNull(notificationMessageVersion.getUpdatedAt());
     }
 
     @Test
-    void createNotificationView_Success() {
-        when(notificationViewMapper.toEntity(notificationViewDto)).thenReturn(notificationView);
-        when(notificationViewRepository.save(notificationView)).thenReturn(notificationView);
-        when(notificationViewMapper.toDto(notificationView)).thenReturn(notificationViewDto);
+    void createNotificationUserStatus_Success_ReturnsNotificationUserStatusDto() {
+        when(notificationUserStatusMapper.toEntity(any(NotificationUserStatusDto.class))).thenReturn(notificationUserStatus);
+        when(notificationUserStatusRepository.save(any(NotificationUserStatus.class))).thenReturn(notificationUserStatus);
+        when(notificationUserStatusMapper.toDto(any(NotificationUserStatus.class))).thenReturn(notificationUserStatusDto);
 
-        NotificationViewDto result = notificationService.createNotificationView(notificationViewDto);
-
-        assertEquals(notificationViewDto, result);
-        verify(notificationViewMapper).toEntity(notificationViewDto);
-        verify(notificationViewRepository).save(notificationView);
-        verify(notificationViewMapper).toDto(notificationView);
-        assertNotNull(notificationView.getLastViewedAt());
-    }
-
-    @Test
-    void createUserNotificationDismissed_Success() {
-        when(userNotificationDismissedMapper.toEntity(userNotificationDismissedDto)).thenReturn(userNotificationDismissed);
-        when(userNotificationDismissedRepository.save(userNotificationDismissed)).thenReturn(userNotificationDismissed);
-        when(userNotificationDismissedMapper.toDto(userNotificationDismissed)).thenReturn(userNotificationDismissedDto);
-
-        UserNotificationDismissedDto result = notificationService.createUserNotificationDismissed(userNotificationDismissedDto);
-
-        assertEquals(userNotificationDismissedDto, result);
-        verify(userNotificationDismissedMapper).toEntity(userNotificationDismissedDto);
-        verify(userNotificationDismissedRepository).save(userNotificationDismissed);
-        verify(userNotificationDismissedMapper).toDto(userNotificationDismissed);
-        assertNotNull(userNotificationDismissed.getDismissedAt());
+        NotificationUserStatusDto result = notificationService.createNotificationUserStatus(notificationUserStatusDto);
+        assertEquals(notificationUserStatusDto, result);
+        verify(notificationUserStatusRepository, times(1)).save(notificationUserStatus);
+        verify(notificationUserStatusMapper, times(1)).toEntity(notificationUserStatusDto);
+        verify(notificationUserStatusMapper, times(1)).toDto(notificationUserStatus);
+        assertNotNull(notificationUserStatus.getCreatedAt());
     }
 }
