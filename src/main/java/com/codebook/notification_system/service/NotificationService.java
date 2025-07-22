@@ -10,8 +10,6 @@ public interface NotificationService {
     NotificationDto createNotification(NotificationDto notificationDto);
     NotificationDto updateNotification(Long id, NotificationDto notificationDto);
     void deleteNotification(Long id);
-
-    NotificationClientDto createNotificationClient(NotificationClientDto notificationClientDto);
     NotificationHistoryDto createNotificationHistory(NotificationHistoryDto notificationHistoryDto);
     NotificationMessageVersionDto createNotificationMessageVersion(NotificationMessageVersionDto notificationMessageVersionDto);
     NotificationUserStatusDto createNotificationUserStatus(NotificationUserStatusDto notificationUserStatusDto);

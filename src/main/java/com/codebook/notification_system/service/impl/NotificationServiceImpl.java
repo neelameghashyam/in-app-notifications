@@ -18,34 +18,28 @@ import java.util.List;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final NotificationClientRepository notificationClientRepository;
     private final NotificationHistoryRepository notificationHistoryRepository;
     private final NotificationMessageVersionRepository notificationMessageVersionRepository;
     private final NotificationUserStatusRepository notificationUserStatusRepository;
     private final NotificationMapper notificationMapper;
-    private final NotificationClientMapper notificationClientMapper;
     private final NotificationHistoryMapper notificationHistoryMapper;
     private final NotificationMessageVersionMapper notificationMessageVersionMapper;
     private final NotificationUserStatusMapper notificationUserStatusMapper;
 
     public NotificationServiceImpl(
             NotificationRepository notificationRepository,
-            NotificationClientRepository notificationClientRepository,
             NotificationHistoryRepository notificationHistoryRepository,
             NotificationMessageVersionRepository notificationMessageVersionRepository,
             NotificationUserStatusRepository notificationUserStatusRepository,
             NotificationMapper notificationMapper,
-            NotificationClientMapper notificationClientMapper,
             NotificationHistoryMapper notificationHistoryMapper,
             NotificationMessageVersionMapper notificationMessageVersionMapper,
             NotificationUserStatusMapper notificationUserStatusMapper) {
         this.notificationRepository = notificationRepository;
-        this.notificationClientRepository = notificationClientRepository;
         this.notificationHistoryRepository = notificationHistoryRepository;
         this.notificationMessageVersionRepository = notificationMessageVersionRepository;
         this.notificationUserStatusRepository = notificationUserStatusRepository;
         this.notificationMapper = notificationMapper;
-        this.notificationClientMapper = notificationClientMapper;
         this.notificationHistoryMapper = notificationHistoryMapper;
         this.notificationMessageVersionMapper = notificationMessageVersionMapper;
         this.notificationUserStatusMapper = notificationUserStatusMapper;
@@ -80,6 +74,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDto createNotification(NotificationDto notificationDto) {
+        if (notificationDto == null) {
+            throw new IllegalArgumentException("NotificationDto cannot be null");
+        }
+        if (notificationDto.versionNumber() == null) {
+            throw new IllegalArgumentException("Version number is required");
+        }
         Notification notification = notificationMapper.toEntity(notificationDto);
         notification.setCreatedAt(LocalDateTime.now());
         notification.setUpdatedAt(LocalDateTime.now());
@@ -90,6 +90,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationDto updateNotification(Long id, NotificationDto notificationDto) {
+        if (notificationDto == null) {
+            throw new IllegalArgumentException("NotificationDto cannot be null");
+        }
+        if (notificationDto.versionNumber() == null) {
+            throw new IllegalArgumentException("Version number is required");
+        }
         Notification existingNotification = notificationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notification not found with id: " + id));
         Notification updatedNotification = notificationMapper.toEntity(notificationDto);
@@ -110,15 +116,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public NotificationClientDto createNotificationClient(NotificationClientDto notificationClientDto) {
-        NotificationClient notificationClient = notificationClientMapper.toEntity(notificationClientDto);
-        NotificationClient savedNotificationClient = notificationClientRepository.save(notificationClient);
-        return notificationClientMapper.toDto(savedNotificationClient);
-    }
-
-    @Override
-    @Transactional
     public NotificationHistoryDto createNotificationHistory(NotificationHistoryDto notificationHistoryDto) {
+        if (notificationHistoryDto == null) {
+            throw new IllegalArgumentException("NotificationHistoryDto cannot be null");
+        }
         NotificationHistory notificationHistory = notificationHistoryMapper.toEntity(notificationHistoryDto);
         notificationHistory.setUpdatedAt(LocalDateTime.now());
         NotificationHistory savedNotificationHistory = notificationHistoryRepository.save(notificationHistory);
@@ -128,6 +129,9 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationMessageVersionDto createNotificationMessageVersion(NotificationMessageVersionDto notificationMessageVersionDto) {
+        if (notificationMessageVersionDto == null) {
+            throw new IllegalArgumentException("NotificationMessageVersionDto cannot be null");
+        }
         NotificationMessageVersion notificationMessageVersion = notificationMessageVersionMapper.toEntity(notificationMessageVersionDto);
         notificationMessageVersion.setUpdatedAt(LocalDateTime.now());
         NotificationMessageVersion savedNotificationMessageVersion = notificationMessageVersionRepository.save(notificationMessageVersion);
@@ -137,6 +141,9 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional
     public NotificationUserStatusDto createNotificationUserStatus(NotificationUserStatusDto notificationUserStatusDto) {
+        if (notificationUserStatusDto == null) {
+            throw new IllegalArgumentException("NotificationUserStatusDto cannot be null");
+        }
         NotificationUserStatus notificationUserStatus = notificationUserStatusMapper.toEntity(notificationUserStatusDto);
         notificationUserStatus.setCreatedAt(LocalDateTime.now());
         NotificationUserStatus savedNotificationUserStatus = notificationUserStatusRepository.save(notificationUserStatus);

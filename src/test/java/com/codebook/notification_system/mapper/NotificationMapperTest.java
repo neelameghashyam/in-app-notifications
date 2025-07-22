@@ -22,16 +22,18 @@ class NotificationMapperTest {
         // Arrange
         Notification entity = new Notification();
         entity.setId(1L);
-        entity.setTitle("Test Notification");
+        entity.setTitle("Test Title");
         entity.setMessage("Test Message");
-        entity.setFromDate(LocalDate.of(2025, 7, 1));
-        entity.setToDate(LocalDate.of(2025, 7, 31));
-        entity.setDeletedAt(LocalDateTime.of(2025, 7, 17, 14, 25));
+        entity.setFromDate(LocalDate.of(2025, 7, 21));
+        entity.setToDate(LocalDate.of(2025, 7, 22));
+        entity.setDeletedAt(LocalDateTime.of(2025, 7, 21, 18, 49));
         entity.setDeletedBy("user1");
         entity.setStatus("ACTIVE");
         entity.setFrequency("DAILY");
-        entity.setCreatedAt(LocalDateTime.of(2025, 7, 1, 10, 0));
-        entity.setUpdatedAt(LocalDateTime.of(2025, 7, 17, 14, 25));
+        entity.setClientId(1L);
+        entity.setVersionNumber(1);
+        entity.setCreatedAt(LocalDateTime.of(2025, 7, 21, 18, 49));
+        entity.setUpdatedAt(LocalDateTime.of(2025, 7, 21, 18, 49));
 
         // Act
         NotificationDto dto = notificationMapper.toDto(entity);
@@ -39,16 +41,18 @@ class NotificationMapperTest {
         // Assert
         assertNotNull(dto);
         assertEquals(1L, dto.id());
-        assertEquals("Test Notification", dto.title());
+        assertEquals("Test Title", dto.title());
         assertEquals("Test Message", dto.message());
-        assertEquals(LocalDate.of(2025, 7, 1), dto.fromDate());
-        assertEquals(LocalDate.of(2025, 7, 31), dto.toDate());
-        assertEquals(LocalDateTime.of(2025, 7, 17, 14, 25), dto.deletedAt());
+        assertEquals(LocalDate.of(2025, 7, 21), dto.fromDate());
+        assertEquals(LocalDate.of(2025, 7, 22), dto.toDate());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), dto.deletedAt());
         assertEquals("user1", dto.deletedBy());
         assertEquals("ACTIVE", dto.status());
         assertEquals("DAILY", dto.frequency());
-        assertEquals(LocalDateTime.of(2025, 7, 1, 10, 0), dto.createdAt());
-        assertEquals(LocalDateTime.of(2025, 7, 17, 14, 25), dto.updatedAt());
+        assertEquals(1L, dto.clientId());
+        assertEquals(1, dto.versionNumber());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), dto.createdAt());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), dto.updatedAt());
     }
 
     @Test
@@ -64,12 +68,9 @@ class NotificationMapperTest {
     void toEntity_shouldMapDtoToEntity() {
         // Arrange
         NotificationDto dto = new NotificationDto(
-                1L, "Test Notification", "Test Message",
-                LocalDate.of(2025, 7, 1), LocalDate.of(2025, 7, 31),
-                LocalDateTime.of(2025, 7, 17, 14, 25), "user1",
-                "ACTIVE", "DAILY",
-                LocalDateTime.of(2025, 7, 1, 10, 0),
-                LocalDateTime.of(2025, 7, 17, 14, 25));
+                1L, "Test Title", "Test Message", LocalDate.of(2025, 7, 21), LocalDate.of(2025, 7, 22),
+                LocalDateTime.of(2025, 7, 21, 18, 49), "user1", "ACTIVE", "DAILY", 1L, 1,
+                LocalDateTime.of(2025, 7, 21, 18, 49), LocalDateTime.of(2025, 7, 21, 18, 49));
 
         // Act
         Notification entity = notificationMapper.toEntity(dto);
@@ -77,16 +78,18 @@ class NotificationMapperTest {
         // Assert
         assertNotNull(entity);
         assertEquals(1L, entity.getId());
-        assertEquals("Test Notification", entity.getTitle());
+        assertEquals("Test Title", entity.getTitle());
         assertEquals("Test Message", entity.getMessage());
-        assertEquals(LocalDate.of(2025, 7, 1), entity.getFromDate());
-        assertEquals(LocalDate.of(2025, 7, 31), entity.getToDate());
-        assertEquals(LocalDateTime.of(2025, 7, 17, 14, 25), entity.getDeletedAt());
+        assertEquals(LocalDate.of(2025, 7, 21), entity.getFromDate());
+        assertEquals(LocalDate.of(2025, 7, 22), entity.getToDate());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), entity.getDeletedAt());
         assertEquals("user1", entity.getDeletedBy());
         assertEquals("ACTIVE", entity.getStatus());
         assertEquals("DAILY", entity.getFrequency());
-        assertEquals(LocalDateTime.of(2025, 7, 1, 10, 0), entity.getCreatedAt());
-        assertEquals(LocalDateTime.of(2025, 7, 17, 14, 25), entity.getUpdatedAt());
+        assertEquals(1L, entity.getClientId());
+        assertEquals(1, entity.getVersionNumber());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), entity.getCreatedAt());
+        assertEquals(LocalDateTime.of(2025, 7, 21, 18, 49), entity.getUpdatedAt());
     }
 
     @Test

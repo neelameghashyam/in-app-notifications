@@ -1,3 +1,4 @@
+
 package com.codebook.notification_system.entity;
 
 import jakarta.persistence.*;
@@ -9,7 +10,7 @@ public class NotificationHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long historyId;
+    private Long id;
 
     @Column(name = "notification_id", nullable = false)
     private Long notificationId;
@@ -33,8 +34,8 @@ public class NotificationHistory {
     private LocalDateTime updatedAt;
 
     // Getters and Setters
-    public Long getHistoryId() { return historyId; }
-    public void setHistoryId(Long historyId) { this.historyId = historyId; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public Long getNotificationId() { return notificationId; }
     public void setNotificationId(Long notificationId) { this.notificationId = notificationId; }
     public String getUpdatedBy() { return updatedBy; }

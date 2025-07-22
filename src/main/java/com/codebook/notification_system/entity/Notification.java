@@ -14,7 +14,7 @@ public class Notification {
     @Column(name = "title", length = 200)
     private String title;
 
-    @Column(name = "message", columnDefinition = "TEXT") // Changed from NVARCHAR(MAX) to TEXT
+    @Column(name = "message", columnDefinition = "TEXT")
     private String message;
 
     @Column(name = "from_date")
@@ -34,6 +34,12 @@ public class Notification {
 
     @Column(name = "frequency", length = 20)
     private String frequency;
+
+    @Column(name = "client_id", nullable = false)
+    private Long clientId;
+
+    @Column(name = "version_number", nullable = false)
+    private Integer versionNumber;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -60,6 +66,10 @@ public class Notification {
     public void setStatus(String status) { this.status = status; }
     public String getFrequency() { return frequency; }
     public void setFrequency(String frequency) { this.frequency = frequency; }
+    public Long getClientId() { return clientId; }
+    public void setClientId(Long clientId) { this.clientId = clientId; }
+    public Integer getVersionNumber() { return versionNumber; }
+    public void setVersionNumber(Integer versionNumber) { this.versionNumber = versionNumber; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

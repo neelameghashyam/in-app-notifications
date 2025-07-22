@@ -13,6 +13,8 @@ public record NotificationDto(
     String deletedBy,
     String status,
     String frequency,
+    Long clientId,
+    Integer versionNumber,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}
